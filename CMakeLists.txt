@@ -3,8 +3,8 @@ project(gtensor LANGUAGES CXX)
 set(VERSION 0.01)
 
 option(USE_GTEST_DISCOVER_TESTS "use gtest_discover_tests()" ON)
-set(GTENSOR_DEVICE "cuda" CACHE STRING "Device type 'none', 'cuda', or 'hip'")
-set_property(CACHE GTENSOR_DEVICE PROPERTY STRINGS "none" "cuda" "hip")
+set(GTENSOR_DEVICE "cuda" CACHE STRING "Device type 'none', 'cuda', 'hip', or 'sycl'")
+set_property(CACHE GTENSOR_DEVICE PROPERTY STRINGS "none" "cuda" "hip" "sycl")
 
 add_library(gtensor INTERFACE)
 
@@ -12,6 +12,7 @@ if ("${GTENSOR_DEVICE}" STREQUAL "cuda")
   message(STATUS "gtensor device: cuda")
   enable_language(CUDA)
   target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_DEVICE)
+  target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_THRUST)
   target_compile_options(gtensor INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>)
   target_compile_options(gtensor INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
 elseif ("${GTENSOR_DEVICE}" STREQUAL "hip")
@@ -49,11 +50,17 @@ elseif ("${GTENSOR_DEVICE}" STREQUAL "hip")
                HINTS "${HIP_PATH}/../" PATHS "/opt/rocm")
 
   target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_DEVICE)
+  target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_THRUST)
 
   # Enable to see the full hcc command and include search paths
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 
   target_link_libraries(gtensor INTERFACE roc::rocthrust)
+elseif ("${GTENSOR_DEVICE}" STREQUAL "sycl")
+  message(STATUS "gtensor device: sycl")
+  target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_DEVICE)
+  target_include_directories(gtensor INTERFACE ../syclthrust/include)
+  target_compile_options(gtensor INTERFACE -fsycl)
 elseif ("${GTENSOR_DEVICE}" STREQUAL "none")
   message(STATUS "gtensor device: none")
 else()

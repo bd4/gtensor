@@ -14,6 +14,9 @@
 
 #ifdef __HCC__
 #include "hip/hip_runtime.h"
+#elif defined(__SYCL__)
+#include <CL/sycl.hpp>
+#include <CL/sycl/usm.hpp>
 #endif
 
 #endif

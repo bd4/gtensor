@@ -9,7 +9,7 @@
 #ifndef GTENSOR_MACROS_H
 #define GTENSOR_MACROS_H
 
-#if GTENSOR_HAVE_DEVICE
+#if GTENSOR_HAVE_DEVICE && GTENSOR_HAVE_THRUST
 
 #define GT_INLINE __host__ __device__
 #define GT_LAMBDA [=] __host__ __device__

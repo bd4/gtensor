@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.13)
 project(daxpy_example LANGUAGES CXX)
 set(VERSION 0.01)
 
-set(GTENSOR_DEVICE "cuda" CACHE STRING "Device type 'none', 'cuda', or 'hip'")
-set_property(CACHE GTENSOR_DEVICE PROPERTY STRINGS "none" "cuda" "hip")
+set(GTENSOR_DEVICE "cuda" CACHE STRING "Device type 'none', 'cuda', 'hip', or 'sycl'")
+set_property(CACHE GTENSOR_DEVICE PROPERTY STRINGS "none" "cuda" "hip" "sycl")
 
 add_library(gtensor INTERFACE)
 
@@ -53,6 +53,11 @@ elseif ("${GTENSOR_DEVICE}" STREQUAL "hip")
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 
   target_link_libraries(gtensor INTERFACE roc::rocthrust)
+elseif ("${GTENSOR_DEVICE}" STREQUAL "sycl")
+  message(STATUS "gtensor device: sycl")
+  target_compile_definitions(gtensor INTERFACE GTENSOR_HAVE_DEVICE)
+  target_include_directories(gtensor INTERFACE ../../syclthrust/include)
+  target_compile_options(gtensor INTERFACE -fsycl)
 elseif ("${GTENSOR_DEVICE}" STREQUAL "none")
   message(STATUS "gtensor device: none")
 else()

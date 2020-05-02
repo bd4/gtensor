@@ -10,8 +10,6 @@
 #ifndef GTENSOR_THRUST_EXT_H
 #define GTENSOR_THRUST_EXT_H
 
-#include "device_runtime.h"
-
 #include "gtl.h"
 #include "macros.h"
 

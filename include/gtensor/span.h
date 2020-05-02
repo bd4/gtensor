@@ -4,7 +4,7 @@
 
 #include "defs.h"
 
-#ifdef GTENSOR_HAVE_DEVICE
+#ifdef GTENSOR_HAVE_THRUST
 #include <thrust/device_ptr.h>
 #endif
 
@@ -52,6 +52,8 @@ private:
 //
 // for a gtensor_view of device memory
 
+#ifdef GTENSOR_HAVE_THRUST
+
 template <typename T>
 class device_span
 {
@@ -77,8 +79,72 @@ private:
   size_type size_ = 0;
 };
 
-#endif
+#elif defined(__SYCL__)
+
+template <typename T>
+class device_span
+{
+public:
+  using value_type = T;
+  using pointer = T*;
+  using reference = T&;
+  using const_pointer = const T*;
+  using const_reference = const T&;
+  using size_type = gt::size_type;
+
+  device_span() = default;
+  device_span(pointer data, size_type size) : data_{data}, size_{size} {}
+
+  GT_INLINE const_pointer data() const { return data_; }
+  GT_INLINE pointer data() { return data_; }
+
+  GT_INLINE const_reference operator[](size_type i) const
+  {
+    assert(i < size_);
+    return data_[i];
+  }
+  GT_INLINE reference operator[](size_type i) { return data_[i]; }
+
+private:
+  pointer data_ = nullptr;
+  size_type size_ = 0;
+};
+
+#endif // GTENSOR_HAVE_THRUST
+
+#else // GTENSOR_HAVE_DEVICE 
+
+template <typename T>
+class device_span
+{
+public:
+  using value_type = T;
+  using pointer = T*;
+  using reference = T&;
+  using const_pointer = const T*;
+  using const_reference = const T&;
+  using size_type = gt::size_type;
+
+  device_span() = default;
+  device_span(pointer data, size_type size) : data_{data}, size_{size} {}
+
+  GT_INLINE const_pointer data() const { return data_; }
+  GT_INLINE pointer data() { return data_; }
+
+  GT_INLINE const_reference operator[](size_type i) const
+  {
+    assert(i < size_);
+    return data_[i];
+  }
+  GT_INLINE reference operator[](size_type i) { return data_[i]; }
+
+private:
+  pointer data_ = nullptr;
+  size_type size_ = 0;
+};
+
+#endif // GTENSOR_HAVE_DEVICE
 
 } // namespace gt
 
-#endif
+#endif // GTENSOR_SPAN_H

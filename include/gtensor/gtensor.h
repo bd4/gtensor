@@ -2,9 +2,18 @@
 #ifndef GTENSOR_GTENSOR_H
 #define GTENSOR_GTENSOR_H
 
-#if GTENSOR_HAVE_DEVICE
+#ifdef GTENSOR_HAVE_DEVICE
+
+#include "device_runtime.h"
+
+#ifdef GTENSOR_HAVE_THRUST
 #include "thrust_ext.h"
+#elif defined(__SYCL__)
+#include "thrust/sycl.h"
+#include "thrust/copy.h"
 #endif
+
+#endif // GTENSOR_HAVE_DEVICE
 
 #include "gfunction.h"
 #include "gtensor_view.h"
@@ -181,6 +190,8 @@ void copy(const gtensor_view<T, N, S_from>& from, gtensor_view<T, N, S_to>& to)
 // ======================================================================
 // launch
 
+#ifdef GTENSOR_HAVE_THRUST
+
 template <typename F>
 __global__ void kernel_launch(gt::shape_type<1> shape, F f)
 {
@@ -245,7 +256,9 @@ __global__ void kernel_launch(gt::shape_type<5> shape, F f)
   }
 }
 
-#endif
+#endif // GTENSOR_HAVE_THRUST
+
+#endif // GTENSOR_HAVE_DEVICE
 
 namespace detail
 {
@@ -295,6 +308,9 @@ struct launch<3, space::host>
 };
 
 #ifdef GTENSOR_HAVE_DEVICE
+
+#ifdef GTENSOR_HAVE_THRUST
+
 template <>
 struct launch<1, space::device>
 {
@@ -377,7 +393,28 @@ struct launch<5, space::device>
   }
 };
 
-#endif
+#elif defined(__SYCL__)
+
+template <>
+struct launch<1, space::device>
+{
+  template <typename F>
+  static void run(const gt::shape_type<1>& shape, F&& f)
+  {
+    cl::sycl::queue q = thrust::sycl::get_queue();
+    auto e = q.submit([&](handler &cgh) {
+      cgh.parallel_for<class Assign1>(range<1>(shape(0)), [=](id<1> idx) {
+         int i = idx[0];
+         f(i);
+      });
+    });
+    e.wait();
+  }
+};
+
+#endif // GTENSOR_HAVE_THRUST
+
+#endif // GTENSOR_HAVE_DEVICE
 
 } // namespace detail
 

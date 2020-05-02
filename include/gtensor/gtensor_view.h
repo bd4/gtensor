@@ -4,6 +4,10 @@
 
 #include "gcontainer.h"
 
+#ifdef GTENSOR_HAVE_DEVICE
+#include "thrust/device_ptr.h"
+#endif
+
 namespace gt
 {
 

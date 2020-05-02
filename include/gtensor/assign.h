@@ -4,6 +4,10 @@
 
 #include "defs.h"
 
+#ifdef __SYCL__
+#include "thrust/sycl.h"
+#endif
+
 namespace gt
 {
 
@@ -91,6 +95,8 @@ struct assigner<6, space::host>
 };
 
 #ifdef GTENSOR_HAVE_DEVICE
+
+#ifdef GTENSOR_HAVE_THRUST
 
 template <typename Elhs, typename Erhs>
 __global__ void kernel_assign_1(Elhs lhs, Erhs rhs)
@@ -290,7 +296,30 @@ struct assigner<6, space::device>
   }
 };
 
-#endif
+#elif defined(__SYCL__) // # GTENSOR_HAVE_DEVICE
+
+template <>
+struct assigner<1, space::device>
+{
+  template <typename E1, typename E2>
+  static void run(E1& lhs, const E2& rhs)
+  {
+    cl::sycl::queue q = thrust::sycl::get_queue();
+    auto e = q.submit([&](handler &cgh) {
+      auto k_lhs = lhs.to_kernel();
+      auto k_rhs = rhs.to_kernel();
+      cgh.parallel_for<class Assign1>(range<1>(lhs.shape(0)), [=](id<1> idx) {
+         int i = idx[0];
+         k_lhs[i] = k_rhs[j];
+      });
+    });
+    e.wait();
+  }
+};
+
+#endif // GTENSOR_HAVE_THRUST
+
+#endif // GTENSOR_HAVE_DEVICE
 
 } // namespace detail
 

@@ -8,8 +8,11 @@
 #include <map>
 #include <vector>
 
-#ifdef GTENSOR_HAVE_DEVICE
+#ifdef GTENSOR_HAVE_THRUST
 #include <thrust/device_allocator.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#elif defined(__SYCL__)
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #endif
@@ -137,7 +140,7 @@ struct kernel;
 struct host
 {
   template <typename T>
-#ifdef GTENSOR_HAVE_DEVICE
+#ifdef GTENSOR_HAVE_THRUST
   using Vector = thrust::host_vector<T>;
 #else
   using Vector = std::vector<T>;
@@ -146,7 +149,7 @@ struct host
   using Span = span<T>;
 };
 
-#ifdef GTENSOR_HAVE_DEVICE
+#ifdef GTENSOR_HAVE_THRUST
 
 #if THRUST_VERSION <= 100903
 template <typename T>
@@ -161,6 +164,16 @@ struct device
 {
   template <typename T>
   using Vector = thrust::device_vector<T, device_allocator<T>>;
+  template <typename T>
+  using Span = device_span<T>;
+};
+
+#elif defined(__SYCL__)
+
+struct device
+{
+  template <typename T>
+  using Vector = thrust::device_vector<T>;
   template <typename T>
   using Span = device_span<T>;
 };
