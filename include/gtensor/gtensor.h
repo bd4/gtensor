@@ -3,15 +3,12 @@
 #define GTENSOR_GTENSOR_H
 
 #ifdef GTENSOR_HAVE_DEVICE
-#pragma message("GTENSOR_HAVE_DEVICE!!!")
 
 #include "device_runtime.h"
 
 #ifdef GTENSOR_HAVE_THRUST
-#pragma message("GTENSOR_HAVE_THRUST!!!")
 #include "thrust_ext.h"
 #elif defined(__SYCL__)
-#pragma message("SYCL!!!")
 #include "thrust/sycl.h"
 #include "thrust/copy.h"
 #endif
@@ -406,7 +403,7 @@ struct launch<1, space::device>
   {
     sycl::queue q = thrust::sycl::get_queue();
     auto e = q.submit([&](sycl::handler &cgh) {
-      cgh.parallel_for<class Assign1>(sycl::range<1>(shape(0)),
+      cgh.parallel_for<class Assign1>(sycl::range<1>(shape[0]),
       [=](sycl::id<1> idx) {
          int i = idx[0];
          f(i);

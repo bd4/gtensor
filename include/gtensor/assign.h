@@ -305,13 +305,13 @@ struct assigner<1, space::device>
   static void run(E1& lhs, const E2& rhs)
   {
     sycl::queue q = thrust::sycl::get_queue();
+    auto k_lhs = lhs.to_kernel();
+    auto k_rhs = rhs.to_kernel();
     auto e = q.submit([&](sycl::handler &cgh) {
-      auto k_lhs = lhs.to_kernel();
-      auto k_rhs = rhs.to_kernel();
       cgh.parallel_for<class Assign1>(sycl::range<1>(lhs.shape(0)),
       [=](sycl::id<1> idx) {
          int i = idx[0];
-         k_lhs[i] = k_rhs[i];
+         k_lhs(i) = k_rhs(i);
       });
     });
     e.wait();
