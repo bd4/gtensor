@@ -309,7 +309,7 @@ struct assigner<1, space::device>
     auto k_rhs = rhs.to_kernel();
     auto e = q.submit([&](sycl::handler &cgh) {
       cgh.parallel_for<class Assign1>(sycl::range<1>(lhs.shape(0)),
-      [=](sycl::id<1> idx) {
+      [=](sycl::id<1> idx) mutable {
          int i = idx[0];
          k_lhs(i) = k_rhs(i);
       });
