@@ -402,11 +402,53 @@ struct launch<1, space::device>
   static void run(const gt::shape_type<1>& shape, F&& f)
   {
     sycl::queue q = thrust::sycl::get_queue();
+    auto range = sycl::range<1>(shape[0]);
     auto e = q.submit([&](sycl::handler &cgh) {
-      cgh.parallel_for<class Assign1>(sycl::range<1>(shape[0]),
-      [=](sycl::id<1> idx) {
-         int i = idx[0];
+      cgh.parallel_for<class Assign1>(range,
+      [=](sycl::item<1> item) mutable {
+         int i = item.get_id(0);
          f(i);
+      });
+    });
+    e.wait();
+  }
+};
+
+template <>
+struct launch<2, space::device>
+{
+  template <typename F>
+  static void run(const gt::shape_type<2>& shape, F&& f)
+  {
+    sycl::queue q = thrust::sycl::get_queue();
+    auto range = sycl::range<2>(shape[0], shape[1]);
+    auto e = q.submit([&](sycl::handler &cgh) {
+      cgh.parallel_for<class Assign2>(range,
+      [=](sycl::item<2> item) mutable {
+         int i = item.get_id(0);
+         int j = item.get_id(1);
+         f(i, j);
+      });
+    });
+    e.wait();
+  }
+};
+
+template <>
+struct launch<3, space::device>
+{
+  template <typename F>
+  static void run(const gt::shape_type<3>& shape, F&& f)
+  {
+    sycl::queue q = thrust::sycl::get_queue();
+    auto range = sycl::range<3>(shape[0], shape[1], shape[2]);
+    auto e = q.submit([&](sycl::handler &cgh) {
+      cgh.parallel_for<class Assign3>(range,
+      [=](sycl::item<3> item) mutable {
+         int i = item.get_id(0);
+         int j = item.get_id(1);
+         int k = item.get_id(2);
+         f(i, j, k);
       });
     });
     e.wait();

@@ -14,6 +14,11 @@
 #define GT_INLINE __host__ __device__
 #define GT_LAMBDA [=] __host__ __device__
 
+#elif defined(__SYCL__)
+
+#define GT_INLINE inline
+#define GT_LAMBDA [=]
+
 #else
 
 #define GT_INLINE inline
