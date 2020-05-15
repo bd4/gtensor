@@ -186,6 +186,7 @@ TEST(gtensor, device_assign_expression)
             (gt::gtensor_device<double, 2>{{22., 24., 26.}, {42., 44., 46.}}));
 }
 
+#if defined(__CUDA__) || defined(__HCC__)
 __global__ void kernel_test(gt::gtensor_view_device<double, 1> d_a,
                             gt::gtensor_view_device<double, 1> d_b)
 {
@@ -236,5 +237,6 @@ TEST(gtensor_kernel, kernel_lambda_call)
 
   EXPECT_EQ(b, (gt::gtensor<double, 1>{1., 2., 3.}));
 }
+#endif
 
 #endif
