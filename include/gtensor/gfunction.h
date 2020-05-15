@@ -151,22 +151,35 @@ inline void calc_shape(S& shape, const Es&... es)
 
 
 namespace detail {
-    struct empty {};
+  struct empty {};
 }
 
 // declare generic gfunction; unary and binary versions are defined below
 template <typename F, typename E1, typename E2> class gfunction;
 
 
-// generic innter types which should work for any version
-template <typename F, typename... E>
-struct gtensor_inner_types<gfunction<F, E...>>
+template <typename F, typename E1, typename E2>
+struct gtensor_inner_types<gfunction<F, E1, E2>>
 {
-  using space_type = space_t<expr_space_type<E>...>;
-  constexpr static size_type dimension = helper::calc_dimension<E...>();
+  using space_type = space_t<expr_space_type<E1>, expr_space_type<E2>>;
+  constexpr static size_type dimension = helper::calc_dimension<E1, E2>();
 
   using value_type =
-    decltype(std::declval<F>()(std::declval<expr_value_type<E>>()...));
+    decltype(std::declval<F>()(std::declval<expr_value_type<E1>>(),
+                               std::declval<expr_value_type<E2>>()));
+  using reference = value_type;
+  using const_reference = value_type;
+};
+
+
+template <typename F, typename E>
+struct gtensor_inner_types<gfunction<F, E, detail::empty>>
+{
+  using space_type = space_t<expr_space_type<E>>;
+  constexpr static size_type dimension = helper::calc_dimension<E>();
+
+  using value_type =
+    decltype(std::declval<F>()(std::declval<expr_value_type<E>>()));
   using reference = value_type;
   using const_reference = value_type;
 };
