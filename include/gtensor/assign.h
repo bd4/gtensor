@@ -3,6 +3,7 @@
 #define GTENSOR_ASSIGN_H
 
 #include "defs.h"
+#include "strides.h"
 
 #ifdef __SYCL__
 #include "thrust/sycl.h"
@@ -13,6 +14,7 @@ namespace gt
 
 constexpr const int BS_X = 16;
 constexpr const int BS_Y = 16;
+constexpr const int BS_LINEAR = 256;
 
 // ======================================================================
 // assign
@@ -363,6 +365,68 @@ struct assigner<3, space::device>
   }
 };
 
+template <typename E>
+auto index_expr(E expr, shape_type<1> idx)
+{
+  return expr(idx[0]);
+}
+
+template <typename E>
+auto index_expr(E expr, shape_type<2> idx)
+{
+  return expr(idx[0], idx[1]);
+}
+
+template <typename E>
+auto index_expr(E expr, shape_type<3> idx)
+{
+  return expr(idx[0], idx[1], idx[2]);
+}
+
+template <typename E>
+auto index_expr(E expr, shape_type<4> idx)
+{
+  return expr(idx[0], idx[1], idx[2], idx[3]);
+}
+
+template <typename E>
+auto index_expr(E expr, shape_type<5> idx)
+{
+  return expr(idx[0], idx[1], idx[2], idx[3], idx[4]);
+}
+
+template <typename E>
+auto index_expr(E expr, shape_type<6> idx)
+{
+  return expr(idx[0], idx[1], idx[2], idx[3], idx[4], idx[5]);
+}
+
+template <size_type N>
+struct assigner<N, space::device>
+{
+  template <typename E1, typename E2>
+  static void run(E1& lhs, const E2& rhs)
+  {
+    sycl::queue q = thrust::sycl::get_queue();
+    auto size = calc_size(lhs.shape());
+    auto k_lhs = lhs.to_kernel();
+    auto k_rhs = rhs.to_kernel();
+    // use linear indexing for simplicity
+    auto block_size = min(size, BS_LINEAR);
+    auto strides = calc_strides(lhs.shape());
+    auto range = sycl::nd_range<1>(sycl::range<1>(size),
+                                   sycl::range<1>(block_size));
+    auto e = q.submit([&](sycl::handler &cgh) {
+      cgh.parallel_for<class AssignN>(range,
+        [=](sycl::item<1> item) mutable {
+          int i = item.get_id(0);
+          auto idx = unravel(i, strides);
+          index_expr(k_lhs, idx) = index_expr(k_rhs, idx);
+        });
+    });
+    e.wait();
+  }
+};
 
 #endif // GTENSOR_HAVE_THRUST
 
