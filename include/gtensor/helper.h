@@ -6,6 +6,7 @@
 #include "sarray.h"
 
 #include <tuple>
+#include <type_traits>
 
 namespace gt
 {
@@ -259,7 +260,46 @@ size_type max(F&& f, const std::tuple<E...>& tpl)
   return detail::max<0, F, E...>(std::forward<F>(f), tpl);
 }
 
+// ======================================================================
+// static_assert_kernel_safe
+//
+// static assert that type is safe to use inside a kernel - for SYCL 1.2.1
+// this means standard layout and trivially copyable, and this should work
+// for CUDA and HIP as well. Future versions of SYCL may relax the standard
+// layout requirement.
+//
+//
+template <typename E>
+inline constexpr void static_assert_kernel_safe(E e)
+{
+  // Technically standard layout is required for SYCL 1.2.1. It's very strict,
+  // in that it requires all data members to be declared in the same class
+  // definition, which breaks down with gcontainer/gstrides/gtensor/gview. In
+  // practice, SYCL implementations seem to work fine.
+  //static_assert(std::is_standard_layout<E>::value,
+  //              "kernel unsafe: not standard layout");
+  static_assert(std::is_trivially_copyable<E>::value,
+                "kernel unsafe: not trivially copyable");
+
+}
+
+/*
+template <typename EC, int N>
+inline constexpr void static_assert_kernel_safe(gt::gview<EC, N> e)
+{
+  // Technically standard layout is required for SYCL 1.2.1. It's very strict,
+  // in that it requires all data members to be declared in the same class
+  // definition, which breaks down with gcontainer/gstrides/gtensor/gview. In
+  // practice, SYCL implementations seem to work fine.
+  //static_assert(std::is_standard_layout<E>::value,
+  //              "kernel unsafe: not standard layout");
+  //static_assert(std::is_trivially_copyable<E>::value,
+  //              "kernel unsafe: not trivially copyable");
+  static_assert(true, "view is always considered safe");
+}
+*/
+
+
 } // namespace helper
 } // namespace gt
-
 #endif

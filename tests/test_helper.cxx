@@ -39,3 +39,23 @@ TEST(helper, nd_initializer_list)
   auto nd3shape = nd_initializer_list_shape<3>(nd3);
   EXPECT_EQ(nd3shape, gt::shape(1,3,2));
 }
+
+TEST(helper, kernel_unsafe)
+{
+    int a[2] = {1, 2};
+    gt::helper::static_assert_kernel_safe(a);
+
+    gt::gtensor_device<double, 1> gvec = {1., 2., 3.};
+    auto k_gvec = gvec.to_kernel();
+    gt::helper::static_assert_kernel_safe(k_gvec);
+
+    auto expr = gvec + 10;
+    auto k_expr = expr.to_kernel();
+    gt::helper::static_assert_kernel_safe(k_expr);
+
+    /*
+    // This should fail to compile
+    std::tuple<double, double> t(1.3, 3.4);
+    gt::helper::static_assert_kernel_safe(t);
+    */
+}

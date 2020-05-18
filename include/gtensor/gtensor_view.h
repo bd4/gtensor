@@ -3,6 +3,7 @@
 #define GTENSOR_GTENSOR_VIEW_H
 
 #include "gcontainer.h"
+#include "helper.h"
 
 #ifdef GTENSOR_HAVE_DEVICE
 #include "thrust/device_ptr.h"

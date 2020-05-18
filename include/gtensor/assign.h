@@ -309,6 +309,10 @@ struct assigner<1, space::device>
     sycl::queue q = thrust::sycl::get_queue();
     auto k_lhs = lhs.to_kernel();
     auto k_rhs = rhs.to_kernel();
+
+    helper::static_assert_kernel_safe(k_lhs);
+    helper::static_assert_kernel_safe(k_rhs);
+
     auto e = q.submit([&](sycl::handler &cgh) {
       cgh.parallel_for<class Assign1>(sycl::range<1>(lhs.shape(0)),
       [=](sycl::item<1> item) mutable {
@@ -329,6 +333,10 @@ struct assigner<2, space::device>
     sycl::queue q = thrust::sycl::get_queue();
     auto k_lhs = lhs.to_kernel();
     auto k_rhs = rhs.to_kernel();
+
+    //helper::static_assert_kernel_safe(k_lhs);
+    //helper::static_assert_kernel_safe(k_rhs);
+
     auto range = sycl::range<2>(lhs.shape(0), lhs.shape(1));
     auto e = q.submit([&](sycl::handler &cgh) {
       cgh.parallel_for<class Assign1>(range,
@@ -351,6 +359,10 @@ struct assigner<3, space::device>
     sycl::queue q = thrust::sycl::get_queue();
     auto k_lhs = lhs.to_kernel();
     auto k_rhs = rhs.to_kernel();
+
+    helper::static_assert_kernel_safe(k_lhs);
+    helper::static_assert_kernel_safe(k_rhs);
+
     auto range = sycl::range<3>(lhs.shape(0), lhs.shape(1), lhs.shape(2));
     auto e = q.submit([&](sycl::handler &cgh) {
       cgh.parallel_for<class Assign1>(range,
@@ -408,10 +420,14 @@ struct assigner<N, space::device>
   static void run(E1& lhs, const E2& rhs)
   {
     sycl::queue q = thrust::sycl::get_queue();
-    auto size = calc_size(lhs.shape());
     auto k_lhs = lhs.to_kernel();
     auto k_rhs = rhs.to_kernel();
+
+    helper::static_assert_kernel_safe(k_lhs);
+    helper::static_assert_kernel_safe(k_rhs);
+
     // use linear indexing for simplicity
+    auto size = calc_size(lhs.shape());
     auto block_size = min(size, BS_LINEAR);
     auto strides = calc_strides(lhs.shape());
     auto range = sycl::nd_range<1>(sycl::range<1>(size),
