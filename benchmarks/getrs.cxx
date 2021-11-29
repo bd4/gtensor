@@ -1,6 +1,7 @@
 #include <complex>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <numeric>
 #include <time.h>
 
@@ -27,9 +28,9 @@ inline void read_iarray(std::ifstream& f, int n, gt::gtensor_span<int, 1> data)
 }
 
 template <typename T>
-void test()
+void test(int n, int nrhs, int batch_size)
 {
-  int n, nrhs, lda, ldb, batch_size;
+  int lda, ldb;
 
   using CT = gt::complex<T>;
 
@@ -43,11 +44,8 @@ void test()
   f >> batch_size;
 
 #else
-  n = 140;
-  nrhs = 1;
   lda = n;
   ldb = n;
-  batch_size = 384;
 #endif
 
   std::cout << "n    = " << n << std::endl;
@@ -168,8 +166,23 @@ int main(int argc, char** argv)
 #ifdef GTENSOR_DEVICE_HIP
   rocblas_initialize();
 #endif
+
+  int n = 140;
+  int nrhs = 1;
+  int batch_size = 384;
+
+  if (argc > 1) {
+    n = std::stoi(argv[1]);
+  }
+  if (argc > 2) {
+    nrhs = std::stoi(argv[2]);
+  }
+  if (argc > 3) {
+    batch_size = std::stoi(argv[3]);
+  }
+
   std::cout << "==== float  ====" << std::endl;
-  test<float>();
+  test<float>(n, nrhs, batch_size);
   std::cout << "==== double ====" << std::endl;
-  test<double>();
+  test<double>(n, nrhs, batch_size);
 }
