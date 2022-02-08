@@ -1,4 +1,8 @@
-!#include "redef.h"
+#ifdef DOUBLE_PREC
+#define MAX_ERR 1e-14
+#else
+#define MAX_ERR 1e-7
+#endif
 
 program test_blas_fortran
     use gpu_api_m
@@ -15,7 +19,7 @@ program test_blas_fortran
     integer, parameter :: N = 4;
     integer, parameter :: batch_size = 4;
     integer, dimension(:), contiguous, pointer :: info
-    integer, dimension(:,:), contiguous, pointer :: pivot
+    integer(C_LONG), dimension(:,:), contiguous, pointer :: pivot
     type(C_PTR), dimension(:), contiguous, pointer :: mat_ptr_arr
     type(C_PTR) :: info_ptr, pivot_ptr, mat_ptr
     integer(C_SIZE_T) :: infobytes, matbytes, pivotbytes
@@ -26,9 +30,10 @@ program test_blas_fortran
     real, dimension(N) :: tmp
     integer :: r,c,b
     complex :: a_complex
+    logical :: result_ok
 
     infobytes =  batch_size*STORAGE_SIZE(N) / 8
-    pivotbytes = batch_size*N*STORAGE_SIZE(N) / 8
+    pivotbytes = batch_size*N*STORAGE_SIZE(N)*2 / 8
     matbytes = N**2 * STORAGE_SIZE(a_complex) / 8
 
     !print *, "allocating infobytes", infobytes
@@ -62,6 +67,7 @@ program test_blas_fortran
 
     call gpublas_destroy()
 
+    result_ok = .true.
     do b=1,batch_size
        A=mat_in(:,:,b)
        L=(0.0,0.0)
@@ -91,8 +97,14 @@ program test_blas_fortran
        dum=matmul(L,U)
        if (maxval(abs(A - dum)) > MAX_ERR) then
          print *, "big error in batch ", b, " ", maxval(abs(A - dum))
+         result_ok = .false.
        endif
     end do
 
+    if (result_ok) then
+      print *, "PASS"
+    else
+      print *, "FAIL"
+    endif
 
 end program test_blas_fortran
