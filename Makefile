@@ -13,6 +13,9 @@ $(BUILD_DIR)/test_zgetrf_fortran_d: tests/test_zgetrf_fortran.f90 src/gpu_api_in
 $(BUILD_DIR)/test_blas_fortran: tests/test_blas_fortran.f90 src/gpu_axpy.o
 	ifort $(FORTRAN_FLAGS) -o $(BUILD_DIR)/test_blas_fortran tests/test_blas_fortran.f90 $(BUILD_DIR)/libcgtblas.a $(BUILD_DIR)/libcgtensor.a src/gpu_axpy.o $(SYCL_LINK) -lstdc++
 
+$(BUILD_DIR)/test_managed_fortran: tests/test_managed_fortran.f90 src/gpu_api_interface.o
+	ifort $(FORTRAN_FLAGS) -o $(BUILD_DIR)/test_managed_fortran tests/test_managed_fortran.f90 src/gpu_api_interface.o $(BUILD_DIR)/libcgtensor.a $(SYCL_LINK) -lstdc++
+
 $(BUILD_DIR)/test_blas_fortran_d: tests/test_blas_fortran.f90 src/gpu_axpy.o
 	ifort $(FORTRAN_FLAGS) -DDOUBLE_PREC -r8 -g -o $(BUILD_DIR)/test_blas_fortran_d tests/test_blas_fortran.f90 $(BUILD_DIR)/libcgtblas.a $(BUILD_DIR)/libcgtensor.a src/gpu_axpy.o $(SYCL_LINK) -lstdc++
 
