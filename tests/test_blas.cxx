@@ -242,6 +242,7 @@ TEST(blas, ddot)
   test_dot_real<double>();
 }
 
+#ifndef GTENSOR_HOST_BLAS_MKL
 template <typename R>
 void test_dot_complex()
 {
@@ -281,6 +282,7 @@ TEST(blas, zdot)
 {
   test_dot_complex<double>();
 }
+#endif
 
 template <typename T>
 void test_gemv_real()

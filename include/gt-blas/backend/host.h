@@ -3,12 +3,48 @@
 
 #include <gtensor/gtensor.h>
 
-#include <complex.h>
-
+#ifdef GTENSOR_HOST_BLAS_MKL
+#include <complex>
+#include <mkl.h>
+using gtblas_complex_float = MKL_Complex8;
+using gtblas_complex_double = MKL_Complex16;
+inline double creal(gtblas_complex_double x)
+{
+  return x.real;
+}
+inline double cimag(gtblas_complex_double x)
+{
+  return x.imag;
+}
+inline float crealf(gtblas_complex_float x)
+{
+  return x.real;
+}
+inline float cimagf(gtblas_complex_float x)
+{
+  return x.imag;
+}
+#define LAPACK_sgetrs sgetrs
+#define LAPACK_dgetrs dgetrs
+#define LAPACK_cgetrs cgetrs
+#define LAPACK_zgetrs zgetrs
+#define LAPACK_sgetrf sgetrf
+#define LAPACK_dgetrf dgetrf
+#define LAPACK_cgetrf cgetrf
+#define LAPACK_zgetrf zgetrf
+#define LAPACK_sgetri sgetri
+#define LAPACK_dgetri dgetri
+#define LAPACK_cgetri cgetri
+#define LAPACK_zgetri zgetri
+#else
 #include <cblas.h>
+#include <ccomplex>
+using gtblas_complex_float = openblas_complex_float;
+using gtblas_complex_double = openblas_complex_double;
 extern "C" {
 #include <lapack.h>
 }
+#endif
 
 namespace gt
 {
@@ -67,8 +103,8 @@ inline void axpy(handle_t& h, int n, T a, const T* x, int incx, T* y, int incy);
            reinterpret_cast<BLASTYPE*>(y), incy);                              \
   }
 
-CREATE_AXPY_CMPLX(cblas_zaxpy, gt::complex<double>, openblas_complex_double)
-CREATE_AXPY_CMPLX(cblas_caxpy, gt::complex<float>, openblas_complex_float)
+CREATE_AXPY_CMPLX(cblas_zaxpy, gt::complex<double>, gtblas_complex_double)
+CREATE_AXPY_CMPLX(cblas_caxpy, gt::complex<float>, gtblas_complex_float)
 CREATE_AXPY(cblas_daxpy, double, double)
 CREATE_AXPY(cblas_saxpy, float, float)
 
@@ -97,8 +133,8 @@ inline void scal(handle_t& h, int n, S fac, T* arr, const int incx);
            reinterpret_cast<BLASTYPE*>(arr), incx);                            \
   }
 
-CREATE_SCAL_CMPLX(cblas_zscal, gt::complex<double>, openblas_complex_double)
-CREATE_SCAL_CMPLX(cblas_cscal, gt::complex<float>, openblas_complex_float)
+CREATE_SCAL_CMPLX(cblas_zscal, gt::complex<double>, gtblas_complex_double)
+CREATE_SCAL_CMPLX(cblas_cscal, gt::complex<float>, gtblas_complex_float)
 CREATE_SCAL(cblas_dscal, double, double)
 CREATE_SCAL(cblas_sscal, float, float)
 
@@ -112,7 +148,7 @@ inline void scal<double, gt::complex<double>>(handle_t& h, int n, double fac,
                                               gt::complex<double>* arr,
                                               const int incx)
 {
-  cblas_zdscal(n, fac, reinterpret_cast<openblas_complex_double*>(arr), incx);
+  cblas_zdscal(n, fac, reinterpret_cast<gtblas_complex_double*>(arr), incx);
 }
 
 template <>
@@ -120,7 +156,7 @@ inline void scal<float, gt::complex<float>>(handle_t& h, int n, float fac,
                                             gt::complex<float>* arr,
                                             const int incx)
 {
-  cblas_csscal(n, fac, reinterpret_cast<openblas_complex_float*>(arr), incx);
+  cblas_csscal(n, fac, reinterpret_cast<gtblas_complex_float*>(arr), incx);
 }
 
 // ======================================================================
@@ -138,8 +174,8 @@ inline void copy(handle_t& h, int n, const T* x, int incx, T* y, int incy);
            reinterpret_cast<BLASTYPE*>(y), incy);                              \
   }
 
-CREATE_COPY(cblas_zcopy, gt::complex<double>, openblas_complex_double)
-CREATE_COPY(cblas_ccopy, gt::complex<float>, openblas_complex_float)
+CREATE_COPY(cblas_zcopy, gt::complex<double>, gtblas_complex_double)
+CREATE_COPY(cblas_ccopy, gt::complex<float>, gtblas_complex_float)
 CREATE_COPY(cblas_dcopy, double, double)
 CREATE_COPY(cblas_scopy, float, float)
 
@@ -165,6 +201,8 @@ CREATE_DOT(cblas_sdot, float, float)
 
 #undef CREATE_DOT
 
+#ifndef GTENSOR_HOST_BLAS_MKL
+
 template <typename T>
 inline T dotu(handle_t& h, int n, const T* x, int incx, const T* y, int incy);
 
@@ -178,9 +216,9 @@ inline T dotu(handle_t& h, int n, const T* x, int incx, const T* y, int incy);
     return {RPART(result), IPART(result)};                                     \
   }
 
-CREATE_DOTU(cblas_zdotu, gt::complex<double>, openblas_complex_double, creal,
+CREATE_DOTU(cblas_zdotu, gt::complex<double>, gtblas_complex_double, creal,
             cimag)
-CREATE_DOTU(cblas_cdotu, gt::complex<float>, openblas_complex_float, crealf,
+CREATE_DOTU(cblas_cdotu, gt::complex<float>, gtblas_complex_float, crealf,
             cimagf)
 
 #undef CREATE_DOTU
@@ -198,12 +236,14 @@ inline T dotc(handle_t& h, int n, const T* x, int incx, const T* y, int incy);
     return {RPART(result), IPART(result)};                                     \
   }
 
-CREATE_DOTC(cblas_zdotc, gt::complex<double>, openblas_complex_double, creal,
+CREATE_DOTC(cblas_zdotc, gt::complex<double>, gtblas_complex_double, creal,
             cimag)
-CREATE_DOTC(cblas_cdotc, gt::complex<float>, openblas_complex_float, crealf,
+CREATE_DOTC(cblas_cdotc, gt::complex<float>, gtblas_complex_float, crealf,
             cimagf)
 
 #undef CREATE_DOTC
+
+#endif // not defined GTENSOR_HOST_BLAS_MKL
 
 // ======================================================================
 // gemv
@@ -238,8 +278,8 @@ inline void gemv(handle_t& h, int m, int n, T alpha, const T* A, int lda,
            incy);                                                              \
   }
 
-CREATE_GEMV_CMPLX(cblas_zgemv, gt::complex<double>, openblas_complex_double)
-CREATE_GEMV_CMPLX(cblas_cgemv, gt::complex<float>, openblas_complex_float)
+CREATE_GEMV_CMPLX(cblas_zgemv, gt::complex<double>, gtblas_complex_double)
+CREATE_GEMV_CMPLX(cblas_cgemv, gt::complex<float>, gtblas_complex_float)
 CREATE_GEMV(cblas_dgemv, double, double)
 CREATE_GEMV(cblas_sgemv, float, float)
 
@@ -265,8 +305,8 @@ inline void getrf_batched(handle_t& h, int n, T** d_Aarray, int lda,
     }                                                                          \
   }
 
-CREATE_GETRF_BATCHED(LAPACK_zgetrf, gt::complex<double>, _Complex double)
-CREATE_GETRF_BATCHED(LAPACK_cgetrf, gt::complex<float>, _Complex float)
+CREATE_GETRF_BATCHED(LAPACK_zgetrf, gt::complex<double>, gtblas_complex_double)
+CREATE_GETRF_BATCHED(LAPACK_cgetrf, gt::complex<float>, gtblas_complex_float)
 CREATE_GETRF_BATCHED(LAPACK_dgetrf, double, double)
 CREATE_GETRF_BATCHED(LAPACK_sgetrf, float, float)
 
@@ -292,8 +332,8 @@ inline void getrf_npvt_batched(handle_t& h, int n, T** d_Aarray, int lda,
     }                                                                          \
   }
 
-CREATE_GETRF_NPVT_BATCHED(LAPACK_zgetrf, gt::complex<double>, _Complex double)
-CREATE_GETRF_NPVT_BATCHED(LAPACK_cgetrf, gt::complex<float>, _Complex float)
+CREATE_GETRF_NPVT_BATCHED(LAPACK_zgetrf, gt::complex<double>, gtblas_complex_double)
+CREATE_GETRF_NPVT_BATCHED(LAPACK_cgetrf, gt::complex<float>, gtblas_complex_float)
 
 #undef CREATE_GETRF_NPVT_BATCHED
 #endif
@@ -326,8 +366,8 @@ inline void getrs_batched(handle_t& h, int n, int nrhs, T* const* d_Aarray,
     }                                                                          \
   }
 
-CREATE_GETRS_BATCHED(LAPACK_zgetrs, gt::complex<double>, _Complex double)
-CREATE_GETRS_BATCHED(LAPACK_cgetrs, gt::complex<float>, _Complex float)
+CREATE_GETRS_BATCHED(LAPACK_zgetrs, gt::complex<double>, gtblas_complex_double)
+CREATE_GETRS_BATCHED(LAPACK_cgetrs, gt::complex<float>, gtblas_complex_float)
 CREATE_GETRS_BATCHED(LAPACK_dgetrs, double, double)
 CREATE_GETRS_BATCHED(LAPACK_sgetrs, float, float)
 
@@ -360,8 +400,8 @@ inline void getri_batched(handle_t& h, int n, T* const* d_Aarray, int lda,
     }                                                                          \
   }
 
-CREATE_GETRI_BATCHED(LAPACK_zgetri, gt::complex<double>, _Complex double)
-CREATE_GETRI_BATCHED(LAPACK_cgetri, gt::complex<float>, _Complex float)
+CREATE_GETRI_BATCHED(LAPACK_zgetri, gt::complex<double>, gtblas_complex_double)
+CREATE_GETRI_BATCHED(LAPACK_cgetri, gt::complex<float>, gtblas_complex_float)
 CREATE_GETRI_BATCHED(LAPACK_dgetri, double, double)
 CREATE_GETRI_BATCHED(LAPACK_sgetri, float, float)
 
@@ -408,9 +448,8 @@ inline void gemm_batched(handle_t& h, int m, int n, int k, T alpha,
   }
 
 CREATE_GEMM_BATCHED_CMPLX(cblas_zgemm, gt::complex<double>,
-                          openblas_complex_double)
-CREATE_GEMM_BATCHED_CMPLX(cblas_cgemm, gt::complex<float>,
-                          openblas_complex_float)
+                          gtblas_complex_double)
+CREATE_GEMM_BATCHED_CMPLX(cblas_cgemm, gt::complex<float>, gtblas_complex_float)
 CREATE_GEMM_BATCHED(cblas_dgemm, double, double);
 CREATE_GEMM_BATCHED(cblas_sgemm, float, float);
 

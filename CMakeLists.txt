@@ -421,11 +421,14 @@ if (GTENSOR_ENABLE_BLAS)
   elseif (${GTENSOR_DEVICE} STREQUAL "host")
     # only openblas is supported at this time -- needs
     # adaptations for the various cblas interfaces
-    set(BLA_VENDOR OpenBLAS)
     find_package(BLAS REQUIRED)
-    get_filename_component(BLAS_DIR ${BLAS_LIBRARIES} DIRECTORY)
+    if (${BLA_VENDOR} MATCHES "Intel*")
+      target_compile_definitions(gtblas INTERFACE GTENSOR_HOST_BLAS_MKL)
+      find_path(BLAS_INCLUDE_DIRS "mkl_blas.h" PATH ${MKLROOT})
+    else()
+      find_path(BLAS_INCLUDE_DIRS "cblas.h" PATH_SUFFIXES openblas)
+    endif()
     # Hack, see https://gitlab.kitware.com/cmake/cmake/-/issues/20268
-    find_path(BLAS_INCLUDE_DIRS cblas.h PATH_SUFFIXES openblas REQUIRED)
     target_include_directories(BLAS::BLAS INTERFACE ${BLAS_INCLUDE_DIRS})
     find_package(LAPACK REQUIRED)
     target_link_libraries(gtblas INTERFACE BLAS::BLAS LAPACK::LAPACK)

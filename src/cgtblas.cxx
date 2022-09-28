@@ -212,6 +212,8 @@ CREATE_C_DOT(gtblas_ddot, double)
 
 #undef CREATE_C_DOT
 
+#ifndef GTENSOR_HOST_BLAS_MKL
+
 // ======================================================================
 // gtblas_Xdotu
 
@@ -241,6 +243,8 @@ CREATE_C_DOTC(gtblas_cdotc, f2c_complex<float>)
 CREATE_C_DOTC(gtblas_zdotc, f2c_complex<double>)
 
 #undef CREATE_C_DOTC
+
+#endif
 
 // ======================================================================
 // gtblas_Xgemv
