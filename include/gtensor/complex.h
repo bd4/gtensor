@@ -4,6 +4,8 @@
 
 #if defined(GTENSOR_DEVICE_CUDA) || defined(GTENSOR_DEVICE_HIP)
 #include <thrust/complex.h>
+#elif defined(GTENSOR_DEVICE_SYCL)
+#include "sycl_ext_complex.h"
 #else
 #include <complex>
 #endif
@@ -21,7 +23,12 @@ namespace gt
 template <typename T>
 using complex = thrust::complex<T>;
 
-#else // not CUDA or HIP
+#elif defined(GTENSOR_DEVICE_SYCL)
+
+template <typename T>
+using complex = gt::backend::sycl::ext::cplx::complex<T>;
+
+#else // host
 
 template <typename T>
 using complex = std::complex<T>;

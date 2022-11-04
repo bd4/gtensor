@@ -4,6 +4,10 @@
 #include "device_runtime.h"
 #include "macros.h"
 
+#if defined(GTENSOR_DEVICE_SYCL)
+#include "sycl_ext_complex.h"
+#endif
+
 namespace gt
 {
 
@@ -57,7 +61,14 @@ GT_INLINE complex<T> exp(thrust::device_reference<const thrust::complex<T>> a)
   return thrust::exp(thrust::raw_reference_cast(a));
 }
 
-#else // not CUDA and GTENSOR_USE_THRUST not defined
+#elif defined(GTENSOR_DEVICE_SYCL)
+
+using gt::backend::sycl::ext::cplx::abs;
+using gt::backend::sycl::ext::cplx::norm;
+using gt::backend::sycl::ext::cplx::exp;
+using gt::backend::sycl::ext::cplx::conj;
+
+#else // host
 
 template <typename T>
 GT_INLINE T norm(const complex<T>& a)
