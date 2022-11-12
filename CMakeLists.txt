@@ -34,6 +34,9 @@ option(GTENSOR_ENABLE_FFT  "Enable gtfft" OFF)
 option(GTENSOR_ENABLE_FORTRAN "Enable Fortran interoperability" OFF)
 option(GTENSOR_ENABLE_SOLVER "Enable high level solver library" OFF)
 
+set(GTENSOR_FORTRAN_PRECISION "single" CACHE STRING "Floating point precision for fgtensor, 'single' or 'double'")
+set_property(CACHE GTENSOR_FORTRAN_PRECISION PROPERTY STRINGS "single" "double")
+
 option(GTENSOR_PER_DIM_KERNELS
        "Enable per dim kernels (may break for large arrays)" OFF)
 
@@ -45,9 +48,31 @@ option(GTENSOR_SYNC_KERNELS "Enable host sync after assign and launch kernels" O
 
 if (GTENSOR_ENABLE_FORTRAN)
   # do this early (here) since later the `enable_language(Fortran)` gives me trouble
-  message(STATUS "${PROJECT_NAME}: Fortran is ENABLED")
+  message(STATUS "${PROJECT_NAME}: Fortran is ENABLED (precision '${GTENSOR_FORTRAN_PRECISION}')")
   enable_language(Fortran)
   set(GTENSOR_ENABLE_CLIB ON)
+
+  if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+    if (GTENSOR_FORTRAN_PRECISION STREQUAL "single")
+      # nothing to do, this is the default for Intel Fortran
+    endif()
+    if (GTENSOR_FORTRAN_PRECISION STREQUAL "double")
+      add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-r8>)
+    endif()
+  endif()
+
+  if (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
+    if (GTENSOR_FORTRAN_PRECISION MATCHES "double")
+      add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-fdefault-real-8>)
+    endif()
+  endif()
+
+  if (CMAKE_Fortran_COMPILER_ID MATCHES Cray)
+    if (GTENSOR_FORTRAN_PRECISION MATCHES "double")
+      set(tmpprecflag "SHELL:-s real64")
+      add_compile_options("$<$<COMPILE_LANGUAGE:Fortran>:${tmpprecflag}>")
+    endif()
+  endif()
 endif()
 
 # HIP specific configuration
