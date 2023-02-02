@@ -16,10 +16,6 @@
 #include "CL/sycl/backend/level_zero.hpp"
 #endif
 
-#ifdef GTENSOR_DEVICE_SYCL_OPENCL
-#include "CL/sycl/backend/opencl.hpp"
-#endif
-
 #else // newer verison, use standard 2020 and ext headers
 
 #include <sycl/sycl.hpp>
@@ -29,10 +25,6 @@
 #include "level_zero/zes_api.h"
 
 #include "sycl/ext/oneapi/backend/level_zero.hpp"
-#endif
-
-#ifdef GTENSOR_DEVICE_SYCL_OPENCL
-#include "sycl/backend/opencl.hpp"
 #endif
 
 #endif // __INTEL_CLANG_COMPILER
