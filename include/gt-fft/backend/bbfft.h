@@ -96,17 +96,32 @@ public:
   }
 
   // move only
+  FFTPlanManyBBFFT(FFTPlanManyBBFFT&& other)
+    : plan_forward_(std::move(other.plan_forward_)),
+      plan_inverse_(std::move(other.plan_inverse_)),
+      valid_(true)
+  {
+    other.valid_ = false;
+  }
+
+  FFTPlanManyBBFFT& operator=(FFTPlanManyBBFFT&& other)
+  {
+    plan_forward_ = std::move(other.plan_forward_);
+    plan_inverse_ = std::move(other.plan_inverse_);
+    valid_ = true;
+    other.valid_ = false;
+  }
+
   // delete copy ctor/assign
   FFTPlanManyBBFFT(const FFTPlanManyBBFFT& other) = delete;
   FFTPlanManyBBFFT& operator=(const FFTPlanManyBBFFT& other) = delete;
 
-  // default move ctor/assign
-  FFTPlanManyBBFFT(FFTPlanManyBBFFT&& other) = default;
-  FFTPlanManyBBFFT& operator=(FFTPlanManyBBFFT&& other) = default;
-
   void operator()(typename detail::fft_config<D, R>::Tin* indata,
                   typename detail::fft_config<D, R>::Tout* outdata) const
   {
+    if (!valid_) {
+      throw std::runtime_error("can't use a moved-from plan");
+    }
     using Bin = typename detail::fft_config<D, R>::Bin;
     using Bout = typename detail::fft_config<D, R>::Bout;
     auto bin = reinterpret_cast<Bin*>(indata);
@@ -118,6 +133,9 @@ public:
   void inverse(typename detail::fft_config<D, R>::Tout* indata,
                typename detail::fft_config<D, R>::Tin* outdata) const
   {
+    if (!valid_) {
+      throw std::runtime_error("can't use a moved-from plan");
+    }
     using Breal = typename detail::fft_config<D, R>::Bin;
     using Bcmplx = typename detail::fft_config<D, R>::Bout;
     auto bin = reinterpret_cast<Bcmplx*>(indata);
@@ -129,6 +147,7 @@ private:
   void init(std::vector<int> lengths_, int istride, int idist, int ostride,
             int odist, int batch_size, gt::stream_view stream)
   {
+    valid_ = true;
     auto& q = stream.get_backend_stream();
 
     unsigned int rank = lengths_.size();
@@ -146,16 +165,42 @@ private:
       shape[i] = 0;
     }
 
-    bbfft::configuration cfg_fwd = {rank,  // dim
-                                    shape, // { M, N_1, N_2, ..., K }
-                                    bbfft::to_precision_v<R>,  // precision
-                                    bbfft::direction::forward, // direction
-                                    Config::transform_forward};
-    cfg_fwd.set_strides_default(false);
-    bbfft::configuration cfg_inv = {rank, shape, bbfft::to_precision_v<R>,
+    std::size_t cshape1;
+    std::size_t istrideu = istride;
+    std::size_t ostrideu = ostride;
+    if constexpr (D == gt::fft::Domain::REAL) {
+      cshape1 = shape[1] / 2 + 1;
+    } else {
+      cshape1 = shape[1];
+    }
+    std::array<std::size_t, bbfft::max_tensor_dim> rstride = {
+      istrideu, istrideu * shape[0], istrideu * shape[1] * shape[0]};
+    std::array<std::size_t, bbfft::max_tensor_dim> cstride = {
+      ostrideu, ostrideu * shape[0], ostrideu * cshape1 * shape[0]};
+
+    for (int i = 1; i < rank; i++) {
+      rstride[i + 2] = shape[i + 1] * rstride[i + 1];
+      cstride[i + 2] = shape[i + 1] * cstride[i + 1];
+    }
+
+    bbfft::configuration cfg_fwd = {
+      rank,                      // dim
+      shape,                     // { M, N_1, N_2, ..., K }
+      bbfft::to_precision_v<R>,  // precision
+      bbfft::direction::forward, // direction
+      Config::transform_forward, // type
+      rstride,                   // input strides
+      cstride                    // output stride
+    };
+    // cfg_fwd.set_strides_default(false);
+    bbfft::configuration cfg_inv = {rank,
+                                    shape,
+                                    bbfft::to_precision_v<R>,
                                     bbfft::direction::backward,
-                                    Config::transform_inverse};
-    cfg_inv.set_strides_default(false);
+                                    Config::transform_inverse,
+                                    cstride,
+                                    rstride};
+    // cfg_inv.set_strides_default(false);
 
     plan_forward_ = bbfft::make_plan(cfg_fwd, q);
     plan_inverse_ = bbfft::make_plan(cfg_inv, q);
@@ -163,6 +208,7 @@ private:
 
   mutable bbfft::plan<::sycl::event> plan_forward_;
   mutable bbfft::plan<::sycl::event> plan_inverse_;
+  bool valid_;
 };
 
 template <gt::fft::Domain D, typename R>
