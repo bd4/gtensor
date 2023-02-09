@@ -481,21 +481,20 @@ if (GTENSOR_ENABLE_FFT)
     target_link_libraries(gtfft INTERFACE hipfft)
   elseif (${GTENSOR_DEVICE} STREQUAL "sycl")
     if (GTENSOR_DEVICE_SYCL_BBFFT)
-      find_package(bbfft-sycl REQUIRED)
-      #CPMAddPackage(
-      #  NAME bbfft
-      #  #GITHUB_REPOSITORY intel/double-batched-fft-library
-      #  #GIT_TAG 20105e4b83894781b31341c04467437e06ae1716
-      #  GITHUB_REPOSITORY bd4/double-batched-fft-library
-      #  GIT_TAG pr/cpm
-      #  OPTIONS
-      #    "BUILD_SYCL ON"
-      #    "BUILD_TESTING OFF"
-      #    "SYCL_COMPILE_OPTIONS -fsycl"
-      #    "SYCL_LINK_OPTIONS -fsycl"
-      #    "OpenCL_ROOT ${DPCPP_PATH}"
-      #  FIND_PACKAGE_ARGUMENTS "CONFIG"
-      #)
+      #find_package(bbfft-sycl REQUIRED)
+      CPMAddPackage(
+        NAME bbfft
+        #GITHUB_REPOSITORY intel/double-batched-fft-library
+        #GIT_TAG 20105e4b83894781b31341c04467437e06ae1716
+        GITHUB_REPOSITORY bd4/double-batched-fft-library
+        GIT_TAG pr/cpm
+        OPTIONS
+          "BUILD_SYCL ON"
+          "BUILD_TESTING OFF"
+          "SYCL_COMPILE_OPTIONS -fsycl"
+          "SYCL_LINK_OPTIONS -fsycl"
+        FIND_PACKAGE_ARGUMENTS "CONFIG"
+      )
       target_compile_definitions(gtfft INTERFACE GTENSOR_DEVICE_SYCL_BBFFT)
       target_link_libraries(gtfft INTERFACE bbfft::bbfft-sycl)
     else()
