@@ -96,21 +96,8 @@ public:
   }
 
   // move only
-  FFTPlanManyBBFFT(FFTPlanManyBBFFT&& other)
-    : plan_forward_(std::move(other.plan_forward_)),
-      plan_inverse_(std::move(other.plan_inverse_)),
-      valid_(true)
-  {
-    other.valid_ = false;
-  }
-
-  FFTPlanManyBBFFT& operator=(FFTPlanManyBBFFT&& other)
-  {
-    plan_forward_ = std::move(other.plan_forward_);
-    plan_inverse_ = std::move(other.plan_inverse_);
-    valid_ = true;
-    other.valid_ = false;
-  }
+  FFTPlanManyBBFFT(FFTPlanManyBBFFT&& other) = default;
+  FFTPlanManyBBFFT& operator=(FFTPlanManyBBFFT&& other) = default;
 
   // delete copy ctor/assign
   FFTPlanManyBBFFT(const FFTPlanManyBBFFT& other) = delete;
@@ -119,7 +106,7 @@ public:
   void operator()(typename detail::fft_config<D, R>::Tin* indata,
                   typename detail::fft_config<D, R>::Tout* outdata) const
   {
-    if (!valid_) {
+    if (!plan_forward_) {
       throw std::runtime_error("can't use a moved-from plan");
     }
     using Bin = typename detail::fft_config<D, R>::Bin;
@@ -133,7 +120,7 @@ public:
   void inverse(typename detail::fft_config<D, R>::Tout* indata,
                typename detail::fft_config<D, R>::Tin* outdata) const
   {
-    if (!valid_) {
+    if (!plan_forward_) {
       throw std::runtime_error("can't use a moved-from plan");
     }
     using Breal = typename detail::fft_config<D, R>::Bin;
@@ -147,7 +134,6 @@ private:
   void init(std::vector<int> lengths_, int istride, int idist, int ostride,
             int odist, int batch_size, gt::stream_view stream)
   {
-    valid_ = true;
     auto& q = stream.get_backend_stream();
 
     unsigned int rank = lengths_.size();
@@ -208,7 +194,6 @@ private:
 
   mutable bbfft::plan<::sycl::event> plan_forward_;
   mutable bbfft::plan<::sycl::event> plan_inverse_;
-  bool valid_;
 };
 
 template <gt::fft::Domain D, typename R>
