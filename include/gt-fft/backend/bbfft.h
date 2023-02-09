@@ -174,9 +174,9 @@ private:
       cshape1 = shape[1];
     }
     std::array<std::size_t, bbfft::max_tensor_dim> rstride = {
-      istrideu, istrideu * shape[0], istrideu * shape[1] * shape[0]};
+      1u, istrideu, istrideu * shape[1]};
     std::array<std::size_t, bbfft::max_tensor_dim> cstride = {
-      ostrideu, ostrideu * shape[0], ostrideu * cshape1 * shape[0]};
+      1u, ostrideu, ostrideu * cshape1};
 
     for (int i = 1; i < rank; i++) {
       rstride[i + 2] = shape[i + 1] * rstride[i + 1];
