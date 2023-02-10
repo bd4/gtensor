@@ -50,11 +50,28 @@ inline bool device_per_tile_enabled()
   return enabled;
 }
 
-// fallback if none of the backend specific methods succeed
 inline uint32_t get_unique_device_id_sycl(int device_index,
                                           const ::sycl::device& d)
 {
-  // TODO: this will be unique, but is not useful for it's intended
+#if __INTEL_CLANG_COMPILER
+  if (d.has(::sycl::aspect::ext_intel_device_info_uuid)) {
+    auto UUID = d.get_info<::sycl::ext::intel::info::device::uuid>();
+    uint32_t unique_id = UUID[0];
+    unique_id |= UUID[1] << 8;
+    unique_id |= UUID[2] << 16;
+    unique_id |= UUID[3] << 24;
+    return unique_id;
+  } else if (d.has(::sycl::aspect::ext_intel_pci_address)) {
+    uint32_t unique_id = 0;
+    auto BDF = d.get_info<::sycl::ext::intel::info::device::pci_address>();
+    std::cout << "bdf " << BDF << std::endl;
+    unique_id |= (std::stoi(BDF.substr(0, 2)) << 16);
+    unique_id |= (std::stoi(BDF.substr(3, 5)) << 8);
+    unique_id |= std::stoi(BDF.substr(6, 8));
+    return unique_id;
+  }
+#endif
+  // NOTE: this will be unique, but is not useful for it's intended
   // purpose of varifying the MPI -> GPU mapping, since it would work
   // even if the runtime returned the same device multiple times.
   return d.get_info<::sycl::info::device::vendor_id>() + device_index;
