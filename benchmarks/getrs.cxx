@@ -10,6 +10,8 @@
 #include "gtensor/gtensor.h"
 #include "gtensor/reductions.h"
 
+#include "gt-bm.h"
+
 #define NRUNS 10
 
 template <typename CT>
@@ -161,7 +163,7 @@ auto read_test_problem(char const* file_name) -> test_problem<CT>
   return {h_Adata, lda, h_Bdata, ldb, h_piv};
 }
 
-template <typename T, typename CT = gt::complex<T>>
+template <typename T, typename S = gt::space::device, typename CT = gt::complex<T>>
 void test(test_problem<CT> tp, int known_bw = 0)
 {
   int n = tp.h_Adata.shape(0);
@@ -192,17 +194,19 @@ void test(test_problem<CT> tp, int known_bw = 0)
   auto h_Ainvptr = gt::empty<CT*>({batch_size});
   auto h_Bptr = gt::empty<CT*>({batch_size});
   auto h_Cptr = gt::empty<CT*>({batch_size});
-  auto d_Aptr = gt::empty_device<CT*>({batch_size});
-  auto d_Ainvptr = gt::empty_device<CT*>({batch_size});
-  auto d_Bptr = gt::empty_device<CT*>({batch_size});
-  auto d_Cptr = gt::empty_device<CT*>({batch_size});
+
+  gt::bm::gtensor2<CT*, 1, S> d_Aptr(gt::shape(batch_size));
+  gt::bm::gtensor2<CT*, 1, S> d_Ainvptr(gt::shape(batch_size));
+  gt::bm::gtensor2<CT*, 1, S> d_Bptr(gt::shape(batch_size));
+  gt::bm::gtensor2<CT*, 1, S> d_Cptr(gt::shape(batch_size));
 
   auto h_Ainvdata = gt::zeros<CT>({n, n, batch_size});
   auto h_Cdata = gt::zeros<CT>({n, nrhs, batch_size});
-  auto d_Adata = gt::empty_device<CT>(tp.h_Adata.shape());
-  auto d_Ainvdata = gt::empty_device<CT>(tp.h_Adata.shape());
-  auto d_Bdata = gt::empty_device<CT>(tp.h_Bdata.shape());
-  auto d_Cdata = gt::empty_device<CT>(h_Cdata.shape());
+
+  gt::bm::gtensor2<CT, 3, S> d_Adata(tp.h_Adata.shape());
+  gt::bm::gtensor2<CT, 3, S> d_Ainvdata(tp.h_Adata.shape());
+  gt::bm::gtensor2<CT, 3, S> d_Bdata(tp.h_Bdata.shape());
+  gt::bm::gtensor2<CT, 3, S> d_Cdata(h_Cdata.shape());
 
   auto d_piv = gt::empty_device<gt::blas::index_t>(tp.h_piv.shape());
 
@@ -239,6 +243,13 @@ void test(test_problem<CT> tp, int known_bw = 0)
   ss << bw2.lower << "_" << bw2.upper;
   bw_str = ss.str();
 
+  const char* memtype_str = nullptr;
+  if (std::is_same<S, gt::space::managed>::value) {
+      memtype_str = "managed";
+  } else {
+      memtype_str = "device ";
+  }
+
   gt::blas::invert_banded_batched(h, n, gt::raw_pointer_cast(d_Aptr.data()),
                                   lda, gt::raw_pointer_cast(d_piv.data()),
                                   gt::raw_pointer_cast(d_Ainvptr.data()), lda,
@@ -270,12 +281,12 @@ void test(test_problem<CT> tp, int known_bw = 0)
     gt::synchronize();
     if (check<T>(tp, d_Bdata, name)) {
       double time = bench(NRUNS, test_fun, name);
-      std::cout << type_str << "\t" << size_str << "\t" << bw_str << "\t"
-                << name << "_avg\t" << time << std::endl;
+      std::cout << type_str << "\t" << memtype_str << "\t"<< size_str << "\t"
+                << bw_str << "\t" << name << "_avg\t" << time << std::endl;
     }
   };
 
-  std::cout << "type\tsize\tlbw_ubw\talgorithm\tseconds" << std::endl;
+  std::cout << "type\tmem_type\tsize\tlbw_ubw\talgorithm\tseconds" << std::endl;
   check_and_measure(test_blas, "blas");
   check_and_measure(test_banded, "banded");
   check_and_measure(test_inverted, "inverted");
@@ -295,6 +306,7 @@ int main(int argc, char** argv)
     }
     return -1;
   } else {
+    // size used for single GPU GENE run on summit
     int n = 140;
     int nrhs = 1;
     int batch_size = 384;
@@ -312,9 +324,10 @@ int main(int argc, char** argv)
     if (argc > 4) {
       bw = std::stoi(argv[4]);
     }
-    //// size used for single GPU GENE run
-    test<float>(make_test_problem<float>(n, nrhs, batch_size, bw), bw);
-    test<double>(make_test_problem<double>(n, nrhs, batch_size, bw), bw);
+    test<float, gt::space::device>(make_test_problem<float>(n, nrhs, batch_size, bw), bw);
+    test<float, gt::space::managed>(make_test_problem<float>(n, nrhs, batch_size, bw), bw);
+    test<double, gt::space::device>(make_test_problem<double>(n, nrhs, batch_size, bw), bw);
+    test<double, gt::space::managed>(make_test_problem<double>(n, nrhs, batch_size, bw), bw);
   }
   return 0;
 }
