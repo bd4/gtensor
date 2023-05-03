@@ -274,6 +274,22 @@ TEST(gview, expression_sub)
   EXPECT_EQ(c, (gt::gtensor<double, 1>{44., 46.}));
 }
 
+TEST(gview, swapaxes_container_6d)
+{
+  gt::shape_type<6> a_shape = {2, 3, 5, 7, 9, 11};
+  gt::size_type a_size = gt::calc_size(a_shape);
+  gt::gtensor<double, 1> aflat = gt::arange<double>(1, a_size + 1);
+  gt::gtensor<double, 6> a = gt::reshape(aflat, a_shape);
+
+  auto a_s = gt::swapaxes(a, 0, 5);
+
+  GT_DEBUG_TYPE(a);
+  GT_DEBUG_TYPE(a_s);
+
+  EXPECT_EQ(a_s(10, 2, 4, 6, 8, 1), a(1, 2, 4, 6, 8, 10));
+  EXPECT_EQ(gt::flatten(a_s), aflat);
+}
+
 TEST(gview, swapaxes_expression)
 {
   gt::gtensor<double, 2> a = {{11., 12., 13.}, {21., 22., 23.}};
@@ -450,6 +466,22 @@ TEST(gview, transpose_container)
 
   EXPECT_EQ(atranspose,
             (gt::gtensor<double, 2>{{11., 12.}, {21., 22.}, {31., 32.}}));
+}
+
+TEST(gview, transpose_container_6d)
+{
+  gt::shape_type<6> a_shape = {2, 3, 5, 7, 9, 11};
+  gt::size_type a_size = gt::calc_size(a_shape);
+  gt::gtensor<double, 1> aflat = gt::arange<double>(1, a_size + 1);
+  gt::gtensor<double, 6> a = gt::reshape(aflat, a_shape);
+
+  auto a_t = gt::transpose(a, gt::shape(3, 1, 4, 0, 2, 5));
+
+  GT_DEBUG_TYPE(a);
+  GT_DEBUG_TYPE(a_t);
+
+  EXPECT_EQ(a_t(6, 2, 8, 1, 4, 10), a(1, 2, 4, 6, 8, 10));
+  EXPECT_EQ(gt::flatten(a_t), aflat);
 }
 
 TEST(gview, transpose_container_rval)
